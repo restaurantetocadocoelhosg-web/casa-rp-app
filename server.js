@@ -3,6 +3,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { URL } = require('url');
 
 const PORT = Number(process.env.PORT || 3000);
@@ -10,6 +11,10 @@ const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SENSOR_TOKEN = process.env.SENSOR_TOKEN || null;
 const TELEMETRY_FRESH_MS = 5 * 60 * 1000;
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+
+const ADMIN_USER = process.env.ADMIN_USER || 'casarp';
+const ADMIN_PASS = process.env.ADMIN_PASS || 'casarp2025';
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -57,6 +62,36 @@ const equipment = [
 ];
 
 const realTelemetry = new Map();
+const sessions = new Map();
+
+function generateToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+function parseCookies(req) {
+  const result = {};
+  (req.headers.cookie || '').split(';').forEach(pair => {
+    const idx = pair.indexOf('=');
+    if (idx < 0) return;
+    const k = pair.slice(0, idx).trim();
+    const v = pair.slice(idx + 1).trim();
+    try { result[k] = decodeURIComponent(v); } catch { result[k] = v; }
+  });
+  return result;
+}
+
+function isAuthenticated(req) {
+  const token = parseCookies(req).rpSession || req.headers['x-session'] || '';
+  if (!token) return false;
+  const s = sessions.get(token);
+  if (!s) return false;
+  if (s.expiresAt < Date.now()) { sessions.delete(token); return false; }
+  return true;
+}
+
+function sessionCookie(token, maxAge) {
+  return `rpSession=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+}
 
 function safePath(pathname) {
   let filePath = pathname === '/' ? '/index.html' : pathname;
@@ -74,12 +109,6 @@ function sendJson(res, statusCode, data) {
     'Content-Length': Buffer.byteLength(body)
   });
   res.end(body);
-}
-
-function corsHeaders(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Sensor-Token');
 }
 
 function readBody(req) {
@@ -103,18 +132,10 @@ function simulateTelemetry(eq) {
   const current = Math.max(18, Math.round((eq.target - 8) + wave * 5));
   const heating = current < eq.target - 1;
   return {
-    equipmentId: eq.id,
-    name: eq.name,
-    online: true,
-    source: 'simulated',
-    currentTemp: current,
-    targetTemp: eq.target,
-    powerKw: eq.powerKw,
-    heating,
-    mode: heating ? 'aquecendo' : 'mantendo',
-    resistance: eq.resistance,
-    alert: false,
-    alertMessage: null,
+    equipmentId: eq.id, name: eq.name, online: true, source: 'simulated',
+    currentTemp: current, targetTemp: eq.target, powerKw: eq.powerKw,
+    heating, mode: heating ? 'aquecendo' : 'mantendo',
+    resistance: eq.resistance, alert: false, alertMessage: null,
     updatedAt: new Date().toISOString()
   };
 }
@@ -126,20 +147,12 @@ function getTelemetry(eq) {
     const deviation = Math.abs(real.temp - eq.target);
     const alert = deviation > eq.alertThreshold;
     return {
-      equipmentId: eq.id,
-      name: eq.name,
-      online: true,
-      source: 'real',
+      equipmentId: eq.id, name: eq.name, online: true, source: 'real',
       clientName: real.clientName || null,
-      currentTemp: real.temp,
-      targetTemp: eq.target,
-      humidity: real.humidity || null,
-      voltage: real.voltage || null,
-      powerKw: eq.powerKw,
-      heating,
-      mode: heating ? 'aquecendo' : 'mantendo',
-      resistance: eq.resistance,
-      alert,
+      currentTemp: real.temp, targetTemp: eq.target,
+      humidity: real.humidity || null, voltage: real.voltage || null,
+      powerKw: eq.powerKw, heating, mode: heating ? 'aquecendo' : 'mantendo',
+      resistance: eq.resistance, alert,
       alertMessage: alert ? `Desvio de ${deviation.toFixed(1)}°C do alvo` : null,
       updatedAt: new Date(real.receivedAt).toISOString()
     };
@@ -149,13 +162,46 @@ function getTelemetry(eq) {
 
 async function handleApi(req, res, pathname) {
   if (req.method === 'OPTIONS') {
-    corsHeaders(res);
-    res.writeHead(204);
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Sensor-Token,X-Session'
+    });
     return res.end();
   }
 
   if (req.method === 'GET' && pathname === '/healthz') {
     return sendJson(res, 200, { ok: true, service: business.appName, time: new Date().toISOString() });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/login') {
+    const body = await readBody(req);
+    if (body.user === ADMIN_USER && body.pass === ADMIN_PASS) {
+      const token = generateToken();
+      sessions.set(token, { user: body.user, expiresAt: Date.now() + SESSION_TTL_MS });
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Set-Cookie': sessionCookie(token, SESSION_TTL_MS / 1000),
+        'Cache-Control': 'no-store'
+      });
+      return res.end(JSON.stringify({ ok: true, user: body.user }));
+    }
+    return sendJson(res, 401, { error: 'Usuário ou senha incorretos.' });
+  }
+
+  if (req.method === 'POST' && pathname === '/api/logout') {
+    const token = parseCookies(req).rpSession || '';
+    sessions.delete(token);
+    res.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Set-Cookie': sessionCookie('', 0),
+      'Cache-Control': 'no-store'
+    });
+    return res.end(JSON.stringify({ ok: true }));
+  }
+
+  if (!isAuthenticated(req)) {
+    return sendJson(res, 401, { error: 'Sessão inválida. Faça login novamente.' });
   }
 
   if (req.method === 'GET' && pathname === '/api/config') {
@@ -169,33 +215,21 @@ async function handleApi(req, res, pathname) {
   if (req.method === 'POST' && pathname === '/api/sensor') {
     if (SENSOR_TOKEN) {
       const auth = req.headers['authorization'] || req.headers['x-sensor-token'] || '';
-      const token = auth.replace(/^Bearer\s+/i, '');
-      if (token !== SENSOR_TOKEN) return sendJson(res, 401, { error: 'Token inválido' });
+      if (auth.replace(/^Bearer\s+/i, '') !== SENSOR_TOKEN) return sendJson(res, 401, { error: 'Token de sensor inválido' });
     }
     const body = await readBody(req);
     const { id, temp, humidity, voltage, clientName } = body;
-    if (!id || typeof temp !== 'number') {
-      return sendJson(res, 400, { error: 'Campos obrigatórios: id (string), temp (number)' });
-    }
+    if (!id || typeof temp !== 'number') return sendJson(res, 400, { error: 'Campos obrigatórios: id (string), temp (number)' });
     const eq = equipment.find(e => e.id === id);
-    if (!eq) return sendJson(res, 404, { error: 'Equipamento não encontrado. IDs válidos: ' + equipment.map(e => e.id).join(', ') });
+    if (!eq) return sendJson(res, 404, { error: 'Equipamento não encontrado' });
     realTelemetry.set(id, { temp, humidity, voltage, clientName, receivedAt: Date.now() });
     const deviation = Math.abs(temp - eq.target);
     const alert = deviation > eq.alertThreshold;
-    return sendJson(res, 200, {
-      ok: true,
-      equipmentId: id,
-      temp,
-      alert,
-      alertMessage: alert ? `Desvio de ${deviation.toFixed(1)}°C do alvo (${eq.target}°C)` : null,
-      receivedAt: new Date().toISOString()
-    });
+    return sendJson(res, 200, { ok: true, equipmentId: id, temp, alert, alertMessage: alert ? `Desvio de ${deviation.toFixed(1)}°C do alvo (${eq.target}°C)` : null, receivedAt: new Date().toISOString() });
   }
 
   if (req.method === 'GET' && pathname === '/api/alerts') {
-    const alerts = equipment
-      .map(eq => getTelemetry(eq))
-      .filter(t => t.source === 'real' && t.alert);
+    const alerts = equipment.map(eq => getTelemetry(eq)).filter(t => t.source === 'real' && t.alert);
     return sendJson(res, 200, { count: alerts.length, alerts });
   }
 
@@ -211,13 +245,7 @@ async function handleApi(req, res, pathname) {
     const eq = equipment.find(e => e.id === commandMatch[1]);
     if (!eq) return sendJson(res, 404, { error: 'Equipamento não encontrado' });
     const body = await readBody(req);
-    return sendJson(res, 200, {
-      ok: true,
-      message: 'Comando recebido. Integração real via ESP32.',
-      equipment: eq.name,
-      received: body,
-      at: new Date().toISOString()
-    });
+    return sendJson(res, 200, { ok: true, message: 'Comando recebido. Integração real via ESP32.', equipment: eq.name, received: body, at: new Date().toISOString() });
   }
 
   return false;
@@ -234,22 +262,37 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const filePath = safePath(pathname);
-    if (!filePath.startsWith(PUBLIC_DIR)) {
-      res.writeHead(403);
-      return res.end('Acesso negado');
+    if (pathname === '/login') {
+      if (isAuthenticated(req)) { res.writeHead(302, { Location: '/' }); return res.end(); }
+      const loginFile = path.join(PUBLIC_DIR, 'login.html');
+      fs.readFile(loginFile, (err, data) => {
+        if (err) { res.writeHead(404); return res.end('Not found'); }
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+        res.end(data);
+      });
+      return;
     }
+
+    const ext = path.extname(pathname).toLowerCase();
+    const isAsset = ['.png','.jpg','.jpeg','.svg','.ico','.webmanifest','.txt'].includes(ext);
+
+    if (!isAsset && !isAuthenticated(req)) {
+      res.writeHead(302, { Location: '/login' });
+      return res.end();
+    }
+
+    const filePath = safePath(pathname);
+    if (!filePath.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end('Acesso negado'); }
 
     fs.readFile(filePath, (err, data) => {
       if (err) {
         fs.readFile(path.join(PUBLIC_DIR, 'index.html'), (fallbackErr, fallback) => {
           if (fallbackErr) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); return res.end('Não encontrado'); }
-          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
           res.end(fallback);
         });
         return;
       }
-      const ext = path.extname(filePath).toLowerCase();
       res.writeHead(200, {
         'Content-Type': mimeTypes[ext] || 'application/octet-stream',
         'Cache-Control': ext === '.html' ? 'no-store' : 'public, max-age=3600'
@@ -263,6 +306,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`${business.appName} rodando em http://${HOST}:${PORT}`);
+  console.log(`Credenciais padrão — usuário: ${ADMIN_USER} | senha: ${ADMIN_PASS}`);
+  console.log('Defina ADMIN_USER e ADMIN_PASS nas variáveis de ambiente para trocar.');
   if (SENSOR_TOKEN) console.log('Sensor token ativo — ESP32 deve enviar header X-Sensor-Token.');
-  console.log('Endpoints ESP32: POST /api/sensor  { id, temp, humidity?, voltage?, clientName? }');
 });
