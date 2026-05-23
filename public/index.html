@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#050914" />
+<title>CASA RP THERMO — Painel Multi-Equipamentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#050914;--bg2:#07152a;--panel:#0b1628;--panel2:#111f36;--glass:rgba(10,22,42,.76);
+  --line:rgba(255,255,255,.11);--line2:rgba(255,190,45,.38);--text:#f7fbff;--muted:#91a0b7;
+  --gold:#ffbd17;--gold2:#ffdb72;--orange:#ff6a23;--heat:#ff3600;--green:#4ade80;--blue:#37b6ff;--red:#f05252;
+  --radius:24px;--shadow:0 25px 80px rgba(0,0,0,.45)
+}
+*{box-sizing:border-box;margin:0;padding:0} html{scroll-behavior:smooth}
+body{min-height:100vh;background:radial-gradient(circle at 18% 8%,rgba(23,83,175,.42),transparent 34%),radial-gradient(circle at 88% 14%,rgba(255,189,23,.14),transparent 35%),linear-gradient(135deg,#020711,#07152a 55%,#020711);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.028) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.028) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 75%);pointer-events:none}
+button,input{font:inherit} button{cursor:pointer}.mono{font-family:'DM Mono',monospace}.app{position:relative;z-index:1;max-width:1500px;margin:auto;padding:18px}.topbar{min-height:74px;display:flex;align-items:center;justify-content:space-between;gap:16px;border:1px solid var(--line);background:rgba(5,9,20,.76);backdrop-filter:blur(18px);border-radius:28px;padding:12px 18px;box-shadow:var(--shadow)}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}.brand-logo{width:58px;height:58px;position:relative;display:grid;place-items:center;flex:0 0 58px}.brand-logo img{width:100%;height:100%;object-fit:contain;display:block}.brand-fallback{position:absolute;inset:7px;border:2px solid rgba(255,255,255,.85);transform:rotate(45deg);border-radius:7px;display:grid;place-items:center}.brand-fallback span{transform:rotate(-45deg);font-weight:900;font-size:22px;color:var(--gold);letter-spacing:-1px}.brand-text{min-width:0}.brand-title{font-weight:900;font-size:22px;letter-spacing:.3px;line-height:1;white-space:nowrap}.brand-title b{color:var(--gold)}.brand-sub{margin-top:4px;color:var(--muted);font-size:11px;letter-spacing:.8px}.online{display:flex;align-items:center;gap:10px;border:1px solid rgba(74,222,128,.28);background:rgba(74,222,128,.08);color:var(--green);border-radius:99px;padding:10px 13px;font:800 12px 'DM Mono',monospace;white-space:nowrap}.led{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 14px var(--green);animation:pulse 1.4s infinite}
+.shell{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr);gap:18px;margin-top:18px}.panel{border:1px solid var(--line);background:linear-gradient(180deg,rgba(13,29,53,.94),rgba(6,15,30,.95));border-radius:32px;box-shadow:var(--shadow);overflow:hidden}.home-head{padding:26px;border-bottom:1px solid var(--line)}.eyebrow{font:900 11px 'DM Mono',monospace;color:var(--gold);letter-spacing:2.7px;text-transform:uppercase}.home-head h1{font-size:44px;line-height:.96;letter-spacing:-2px;margin-top:8px}.home-head h1 span{color:var(--gold)}.home-head p{max-width:760px;margin-top:12px;line-height:1.5;color:var(--muted);font-size:14px}.tools{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.chip{border:1px solid var(--line);background:rgba(255,255,255,.045);color:var(--text);border-radius:99px;padding:10px 14px;font-weight:900;font-size:12px;transition:.2s}.chip:hover,.chip.active{border-color:var(--gold);color:var(--gold);box-shadow:0 0 0 4px rgba(255,189,23,.08)}.search{margin-left:auto;min-width:225px;flex:1;max-width:320px;background:rgba(255,255,255,.055);border:1px solid var(--line);border-radius:99px;color:var(--text);padding:11px 15px;outline:none}.search:focus{border-color:var(--gold)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;padding:20px}.card{position:relative;min-height:260px;border:1px solid var(--line);background:radial-gradient(circle at 50% 0%,rgba(255,189,23,.1),transparent 42%),linear-gradient(180deg,rgba(17,35,61,.98),rgba(5,12,25,.98));border-radius:27px;padding:16px;overflow:hidden;transform-style:preserve-3d;transition:transform .25s ease,border-color .25s,box-shadow .25s}.card:hover{transform:translateY(-8px) rotateX(3deg) rotateY(-3deg);border-color:var(--gold);box-shadow:0 22px 60px rgba(255,189,23,.13)}.card.active{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,189,23,.12),0 30px 70px rgba(0,0,0,.42)}.card:after{content:"";position:absolute;inset:auto -20% -20% auto;width:170px;height:170px;background:radial-gradient(circle,rgba(255,189,23,.18),transparent 70%);border-radius:50%}.card-top{display:flex;justify-content:space-between;gap:8px;position:relative;z-index:2}.tag{font:900 10px 'DM Mono',monospace;color:var(--gold);letter-spacing:1px}.mini-status{font:900 10px 'DM Mono',monospace;color:var(--green)}.card h3{font-size:21px;letter-spacing:-.4px;margin-top:10px;position:relative;z-index:2}.card p{font-size:12px;color:var(--muted);line-height:1.4;margin-top:6px;position:relative;z-index:2}.mini3d{height:118px;margin-top:8px;display:grid;place-items:center;perspective:560px;position:relative;z-index:2}.mini3d .obj{transform:rotateX(62deg) rotateZ(-30deg);animation:float 3.6s ease-in-out infinite}.heat-lines{position:absolute;inset:76px 0 auto;display:flex;justify-content:center;gap:10px;opacity:.85}.heat-lines i{width:4px;height:36px;border-radius:99px;background:linear-gradient(transparent,var(--gold),transparent);filter:blur(.3px);animation:rise 1.4s infinite ease-in-out}.heat-lines i:nth-child(2){animation-delay:.25s}.heat-lines i:nth-child(3){animation-delay:.5s}.card-foot{position:absolute;left:16px;right:16px;bottom:14px;display:flex;align-items:center;justify-content:space-between;color:var(--muted);font:800 11px 'DM Mono',monospace}.spark{color:var(--gold)}
+/* mini objects */.coil{width:96px;height:54px;border:7px solid #d7dde7;border-left-color:transparent;border-radius:16px;box-shadow:inset 0 0 0 2px rgba(0,0,0,.28),0 10px 28px rgba(255,100,10,.16);position:relative}.coil:before,.coil:after{content:"";position:absolute;width:34px;height:48px;border:7px solid #d7dde7;border-bottom-color:transparent;border-radius:18px;top:-7px}.coil:before{left:20px}.coil:after{right:20px}.card.active .coil,.card:hover .coil{filter:drop-shadow(0 0 14px rgba(255,126,24,.65))}.tube{width:112px;height:48px;border:7px solid #cfd7e3;border-radius:22px;position:relative}.tube:after{content:"";position:absolute;right:-18px;top:12px;width:28px;height:8px;background:#c9a060;border-radius:8px}.cuba{width:112px;height:60px;background:linear-gradient(135deg,#d8e1ee,#798596);border-radius:14px 14px 8px 8px;box-shadow:inset -8px -8px 18px rgba(0,0,0,.28)}.cuba:after{content:"";display:block;width:84px;height:27px;background:linear-gradient(#f8fbff,#9faabc);margin:12px auto;border-radius:10px}.oven{width:108px;height:88px;background:linear-gradient(135deg,#e5e7eb,#6b7280);border-radius:12px;position:relative;box-shadow:inset -10px -10px 25px rgba(0,0,0,.35)}.oven:before{content:"";position:absolute;left:16px;right:16px;top:20px;height:44px;background:rgba(5,11,22,.86);border:2px solid rgba(255,255,255,.25);border-radius:6px}.oven:after{content:"";position:absolute;left:28px;right:28px;top:39px;height:8px;border:4px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:10px;filter:drop-shadow(0 0 8px var(--orange));opacity:.85}.boiler{width:66px;height:118px;background:linear-gradient(90deg,#e8edf5,#8b96a6 55%,#f5f7fa);border-radius:34px;position:relative;box-shadow:inset -12px 0 22px rgba(0,0,0,.25)}.boiler:after{content:"";position:absolute;bottom:16px;left:-18px;width:102px;height:14px;border:5px solid #b6c0cc;border-top:none;border-radius:0 0 20px 20px}.pool{width:122px;height:74px;background:linear-gradient(135deg,#0ea5e9,#1e40af);border:8px solid #d7dde7;border-radius:18px;position:relative;overflow:hidden}.pool:before{content:"";position:absolute;inset:0;background:repeating-radial-gradient(ellipse at 30% 50%,rgba(255,255,255,.25) 0 2px,transparent 2px 15px);animation:water 3s linear infinite}.steamGen{width:88px;height:106px;background:linear-gradient(135deg,#d8dee8,#707b8b);border-radius:14px;position:relative}.steamGen:before{content:"";position:absolute;left:18px;right:18px;bottom:18px;height:14px;border:5px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:10px;filter:drop-shadow(0 0 10px var(--orange))}.fryer{width:112px;height:78px;background:linear-gradient(135deg,#f1f5f9,#7e8795);border-radius:12px;position:relative}.fryer:before{content:"";position:absolute;left:16px;right:16px;top:12px;height:36px;background:#071426;border-radius:8px;border:3px solid #cbd5e1}.fryer:after{content:"";position:absolute;left:28px;right:28px;top:30px;height:8px;border:4px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:10px;filter:drop-shadow(0 0 10px var(--orange))}.dish{width:108px;height:82px;background:linear-gradient(135deg,#d9e1eb,#778596);border-radius:12px;position:relative}.dish:before{content:"";position:absolute;left:12px;right:12px;bottom:12px;height:36px;border-radius:8px;background:linear-gradient(135deg,#57c7ff,#0d4b8b);opacity:.7}.dish:after{content:"";position:absolute;left:26px;right:26px;top:28px;height:8px;border:4px solid #d7dde7;border-left-color:transparent;border-right-color:transparent;border-radius:10px}
+/* dashboard */.dash{min-height:820px;display:grid;grid-template-rows:auto 1fr auto}.dash-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:24px;border-bottom:1px solid var(--line)}.dash-title h2{font-size:36px;line-height:1;letter-spacing:-1.5px}.dash-title p{color:var(--muted);margin-top:8px;font-size:13px;line-height:1.45}.toggle{width:82px;height:44px;border-radius:99px;border:1px solid var(--line2);background:#061123;position:relative;box-shadow:inset 0 0 20px rgba(0,0,0,.4)}.toggle:after{content:"";position:absolute;top:5px;left:5px;width:32px;height:32px;border-radius:50%;background:#64748b;transition:.25s}.toggle.on{background:rgba(74,222,128,.14);border-color:rgba(74,222,128,.52)}.toggle.on:after{left:43px;background:var(--green);box-shadow:0 0 16px var(--green)}.stage{position:relative;min-height:420px;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 30%,rgba(255,189,23,.13),transparent 34%),linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.25))}.scene-label{position:absolute;top:18px;left:20px;border:1px solid var(--line);background:rgba(5,9,20,.45);border-radius:99px;padding:9px 12px;color:var(--muted);font:800 11px 'DM Mono',monospace;letter-spacing:1px}.main-model{position:relative;width:410px;height:310px;display:grid;place-items:center;transform-style:preserve-3d}.main-model>*{transform:rotateX(60deg) rotateZ(-28deg)}.main-model.on .hot{filter:drop-shadow(0 0 14px var(--orange));animation:glow 1.4s infinite}.particles{position:absolute;inset:0;pointer-events:none;overflow:hidden}.particles span{position:absolute;border-radius:50%;background:rgba(255,255,255,.28);filter:blur(2px);animation:particle 4s linear forwards}.particles span.fire{background:rgba(255,110,20,.55);filter:blur(1px)}
+/* big models */.big-sauna{width:340px;height:230px;position:relative;transform-style:preserve-3d}.wood-wall{position:absolute;inset:20px 0 50px;background:repeating-linear-gradient(90deg,#5a3518 0 14px,#734622 14px 17px,#3a2110 17px 18px);border-radius:14px;box-shadow:inset 0 0 50px rgba(0,0,0,.36)}.bench{position:absolute;height:24px;left:70px;right:25px;background:repeating-linear-gradient(90deg,#c17a3a 0 16px,#9b5b28 16px 18px);border-radius:7px}.bench.a{bottom:86px}.bench.b{bottom:130px;left:105px}.heater{position:absolute;left:50px;bottom:45px;width:95px;height:80px;background:linear-gradient(135deg,#404248,#16181c);border-radius:12px;box-shadow:0 14px 30px rgba(0,0,0,.45)}.rocks{position:absolute;top:-20px;left:7px;right:7px;display:flex;gap:4px}.rocks i{width:17px;height:18px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#bdb5a6,#534b43)}.res-glow{position:absolute;left:14px;right:14px;bottom:16px;height:10px;border:5px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:18px}.big-steam{width:300px;height:240px;position:relative}.gen-box{width:130px;height:170px;background:linear-gradient(135deg,#d7dee8,#6f7886);border-radius:18px;box-shadow:inset -16px -10px 30px rgba(0,0,0,.32);position:absolute;left:95px;top:36px}.gen-box:before{content:"STEAM\A GENERATOR";white-space:pre;position:absolute;inset:45px 18px auto;background:#0b1628;color:var(--gold);border-radius:8px;padding:10px 4px;text-align:center;font:900 12px 'DM Mono',monospace}.steam-pipe{position:absolute;left:132px;top:18px;width:96px;height:48px;border:9px solid #c9d2df;border-bottom:none;border-radius:35px 35px 0 0}.big-banho,.big-track{width:340px;height:210px;position:relative}.banho-cuba{position:absolute;inset:40px 20px 30px;background:linear-gradient(135deg,#e8edf4,#737f91);border-radius:26px 26px 14px 14px;box-shadow:inset -22px -15px 35px rgba(0,0,0,.33)}.banho-water{position:absolute;left:55px;right:55px;top:68px;height:48px;background:linear-gradient(135deg,rgba(55,183,255,.8),rgba(18,76,130,.8));border-radius:18px;animation:water 4s linear infinite}.banho-res{position:absolute;left:95px;right:95px;top:110px;height:12px;border:6px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:18px}.track-top{position:absolute;left:15px;right:15px;top:38px;height:100px;background:linear-gradient(135deg,#f2f4f7,#8e98a6);border-radius:18px}.track-top:before{content:"";position:absolute;inset:18px 20px;background:repeating-linear-gradient(90deg,#d5dae2 0 52px,#101827 52px 56px);border-radius:10px}.big-oven{width:350px;height:260px;position:relative}.oven-case{position:absolute;left:32px;right:32px;top:28px;bottom:28px;background:linear-gradient(135deg,#e9edf4,#6f7887);border-radius:22px;box-shadow:inset -20px -20px 46px rgba(0,0,0,.36)}.oven-door{position:absolute;left:70px;right:70px;top:68px;height:110px;background:rgba(3,9,18,.82);border:4px solid rgba(255,255,255,.2);border-radius:12px}.oven-coil-big{position:absolute;left:110px;right:110px;top:116px;height:17px;border:8px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:20px}.big-pool{width:360px;height:220px;position:relative}.pool-basin{position:absolute;inset:45px 20px;background:linear-gradient(135deg,#0ea5e9,#164c9d);border:14px solid #dbe4ef;border-radius:36px;overflow:hidden;box-shadow:inset 0 0 40px rgba(255,255,255,.14)}.pool-basin:before{content:"";position:absolute;inset:-15px;background:repeating-radial-gradient(ellipse at 30% 40%,rgba(255,255,255,.27) 0 2px,transparent 2px 18px);animation:water 3s linear infinite}.pool-heater{position:absolute;right:40px;bottom:30px;width:92px;height:42px;border-radius:22px;background:linear-gradient(135deg,#d9e2ee,#768294);box-shadow:inset -8px -8px 18px rgba(0,0,0,.26)}.big-boiler{width:300px;height:270px;position:relative}.boiler-body{position:absolute;left:100px;top:20px;width:105px;height:220px;border-radius:55px;background:linear-gradient(90deg,#eff3f8,#7b8797 56%,#f8fafc);box-shadow:inset -20px 0 35px rgba(0,0,0,.25)}.boiler-heat{position:absolute;left:118px;right:112px;bottom:70px;height:16px;border:7px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:20px}.pipe{position:absolute;border:8px solid #b9c4d3;border-radius:40px}.pipe.one{width:150px;height:45px;left:20px;top:80px;border-right:none}.pipe.two{width:150px;height:45px;right:20px;bottom:70px;border-left:none}.big-fryer{width:340px;height:220px;position:relative}.fryer-case{position:absolute;left:42px;right:42px;top:55px;height:120px;background:linear-gradient(135deg,#e8edf4,#737f91);border-radius:20px;box-shadow:inset -18px -16px 35px rgba(0,0,0,.33)}.oil{position:absolute;left:80px;right:80px;top:82px;height:52px;background:linear-gradient(135deg,#c8881b,#5f3106);border-radius:16px}.fryer-res{position:absolute;left:106px;right:106px;top:106px;height:14px;border:7px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:20px}.big-dish{width:340px;height:220px;position:relative}.dish-case{position:absolute;left:52px;right:52px;top:50px;bottom:35px;background:linear-gradient(135deg,#e8edf4,#737f91);border-radius:20px}.dish-water{position:absolute;left:82px;right:82px;top:86px;height:70px;border-radius:14px;background:linear-gradient(135deg,rgba(55,183,255,.82),rgba(19,71,126,.82))}.dish-res{position:absolute;left:118px;right:118px;top:124px;height:14px;border:7px solid var(--orange);border-left-color:transparent;border-right-color:transparent;border-radius:20px}.tech{position:absolute;right:35px;bottom:35px;width:55px;height:85px;transform:rotateX(60deg) rotateZ(-28deg);opacity:.85}.tech:before{content:"";position:absolute;left:14px;top:16px;width:28px;height:50px;background:#122447;border-radius:12px 12px 8px 8px}.tech:after{content:"";position:absolute;left:18px;top:0;width:20px;height:20px;background:#d7aa86;border-radius:50%}.tech i{position:absolute;left:-10px;top:34px;width:75px;height:8px;background:#d7aa86;border-radius:8px;transform:rotate(-24deg)}
+.control{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:18px}.glass{border:1px solid var(--line);background:rgba(255,255,255,.055);backdrop-filter:blur(16px);border-radius:24px;padding:18px}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metric{border:1px solid var(--line);border-radius:18px;padding:14px 10px;background:rgba(5,9,20,.35);text-align:center}.metric small{display:block;color:var(--muted);font:800 10px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px}.metric b{display:block;margin-top:7px;font-size:25px}.gold{color:var(--gold)!important}.setrow{display:flex;align-items:center;justify-content:center;gap:18px;margin-top:16px}.round{width:48px;height:48px;border-radius:50%;border:1px solid var(--line2);background:rgba(255,189,23,.08);color:var(--gold);font-size:28px;font-weight:900}.setrow strong{min-width:90px;text-align:center;font-size:24px}.bar{height:9px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:16px}.bar span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--orange),var(--gold));border-radius:inherit;transition:width .5s}.panel-title{display:block;color:var(--gold);font:900 11px 'DM Mono',monospace;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px}.presets{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.preset{border:1px solid var(--line);border-radius:14px;background:rgba(5,9,20,.34);color:var(--text);padding:10px 8px;text-align:left;transition:.2s}.preset:hover,.preset.active{border-color:var(--gold);color:var(--gold);background:rgba(255,189,23,.08)}.preset b{display:block;font-size:12px}.preset small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.service-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}.service-item{border:1px solid var(--line);background:rgba(5,9,20,.26);border-radius:14px;padding:10px}.service-item small{display:block;color:var(--muted);font:800 10px 'DM Mono',monospace;text-transform:uppercase}.service-item b{display:block;margin-top:5px;font-size:12px;line-height:1.25}.notes{color:var(--muted);font-size:12px;line-height:1.45;margin-top:12px}.foot{display:grid;grid-template-columns:1fr 1fr 1.35fr;gap:14px;border-top:1px solid var(--line);padding:16px 18px;color:var(--muted);font-size:12px}.foot b{color:var(--text)}.empty{padding:40px 20px;color:var(--muted);text-align:center;grid-column:1/-1}.install-banner{position:fixed;left:18px;right:18px;bottom:18px;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:14px;max-width:680px;margin:auto;border:1px solid var(--line2);background:rgba(5,9,20,.88);backdrop-filter:blur(18px);border-radius:22px;padding:13px 16px;box-shadow:var(--shadow)}.install-banner p{font-size:12px;color:var(--muted);line-height:1.35}.install-banner b{color:var(--gold)}.install-banner button{border:1px solid var(--line2);background:rgba(255,189,23,.12);color:var(--gold);border-radius:14px;padding:10px 12px;font-weight:900;font-size:12px}.hidden{display:none!important}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.42}}@keyframes float{0%,100%{transform:rotateX(62deg) rotateZ(-30deg) translateY(0)}50%{transform:rotateX(62deg) rotateZ(-30deg) translateY(-8px)}}@keyframes rise{0%{transform:translateY(18px) scaleY(.6);opacity:0}45%{opacity:1}100%{transform:translateY(-20px) scaleY(1.2);opacity:0}}@keyframes water{from{background-position:0 0}to{background-position:90px 0}}@keyframes glow{0%,100%{opacity:.72}50%{opacity:1}}@keyframes particle{0%{width:12px;height:12px;opacity:.75;transform:translate(0,0) scale(.6)}100%{width:60px;height:60px;opacity:0;transform:translate(var(--x),var(--y)) scale(1.6)}}
+.wa-btn{display:flex;align-items:center;justify-content:center;gap:9px;background:#25d366;color:#fff;border:none;border-radius:14px;padding:13px 18px;font:900 13px Inter,system-ui;cursor:pointer;text-decoration:none;transition:.2s;width:100%}
+.wa-btn:hover{background:#1ebe5d;transform:translateY(-2px);box-shadow:0 8px 24px rgba(37,211,102,.3)}
+.wa-btn svg{width:18px;height:18px;flex:0 0 18px;fill:currentColor}
+.card-wa-btn{background:#25d366;border:none;border-radius:9px;padding:5px 9px;color:#fff;font:900 10px 'DM Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-decoration:none;transition:.15s;white-space:nowrap}
+.card-wa-btn:hover{background:#1ebe5d;transform:scale(1.04)}
+.data-src{font:900 9px 'DM Mono',monospace;border-radius:99px;padding:3px 8px;vertical-align:middle;margin-left:6px}
+.data-src.real{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.35)}
+.data-src.sim{background:rgba(145,160,183,.1);color:var(--muted);border:1px solid rgba(145,160,183,.25)}
+.alert-pill{background:rgba(240,82,82,.18);color:#f87171;border:1px solid rgba(240,82,82,.4);border-radius:99px;font:900 9px 'DM Mono',monospace;padding:3px 8px;vertical-align:middle;margin-left:6px;animation:pulse 1.4s infinite}
+.wa-section{padding:0 18px 18px}
+@media(max-width:1160px){.shell{grid-template-columns:1fr}.dash{min-height:auto}.grid{grid-template-columns:repeat(2,1fr)}.dash{order:-1}.topbar{align-items:flex-start}.online{display:none}}
+@media(max-width:700px){.app{padding:10px}.topbar{border-radius:20px}.brand-logo{width:48px;height:48px;flex-basis:48px}.brand-title{font-size:17px}.brand-sub{font-size:10px}.home-head{padding:20px}.home-head h1{font-size:34px}.grid{grid-template-columns:1fr;padding:14px}.card{min-height:235px}.tools{display:grid;grid-template-columns:1fr 1fr}.search{grid-column:1/-1;max-width:none;min-width:0;margin-left:0}.dash-top{padding:20px}.dash-title h2{font-size:30px}.stage{min-height:330px}.main-model{transform:scale(.78)}.control{grid-template-columns:1fr;padding:14px}.foot{grid-template-columns:1fr}.install-banner{left:10px;right:10px;bottom:10px}.metrics{grid-template-columns:1fr 1fr 1fr}.metric b{font-size:20px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo" aria-label="Casa RP Resistências">
+        <img src="logo-casa-rp.png" alt="Casa RP Resistências" onerror="this.style.display='none'">
+        <div class="brand-fallback"><span>RP</span></div>
+      </div>
+      <div class="brand-text">
+        <div class="brand-title">CASA RP <b>THERMO</b></div>
+        <div class="brand-sub mono">controle térmico inteligente para vários equipamentos</div>
+      </div>
+    </div>
+    <div class="online"><span class="led"></span><span id="clock">--:--</span> · DEMO ONLINE</div>
+  </header>
+
+  <section class="shell">
+    <main class="panel">
+      <div class="home-head">
+        <div class="eyebrow">Painel multi-equipamentos</div>
+        <h1>Escolha o <span>equipamento</span> e veja o controle 3D</h1>
+        <p>Protótipo visual para a Casa RP: filtros por setor, cards 3D, calor, vapor, resistência aquecendo, presets de produção e painel técnico para serviço.</p>
+        <div class="tools" role="toolbar" aria-label="Filtros">
+          <button class="chip active" data-filter="todos">Todos</button>
+          <button class="chip" data-filter="residencial">Residencial</button>
+          <button class="chip" data-filter="comercial">Comercial</button>
+          <button class="chip" data-filter="industrial">Industrial</button>
+          <button class="chip" data-filter="hospitalar">Hospitalar</button>
+          <input class="search" id="search" placeholder="Buscar: sauna, forno, boiler..." />
+        </div>
+      </div>
+      <div class="grid" id="cards"></div>
+    </main>
+
+    <aside class="panel dash" id="dashboard">
+      <div class="dash-top">
+        <div class="dash-title">
+          <div class="eyebrow" id="dashSector">Comercial</div>
+          <h2 id="dashName">Sauna Seca</h2>
+          <p id="dashDesc">Resistência, equipamento e local de trabalho no mesmo painel.</p>
+        </div>
+        <button class="toggle on" id="power" aria-label="Ligar ou desligar equipamento"></button>
+      </div>
+      <div class="stage" id="stage">
+        <div class="scene-label" id="sceneLabel">AÇÃO DE SERVIÇO + RESISTÊNCIA</div>
+        <div class="particles" id="particles"></div>
+        <div class="main-model on" id="mainModel"></div>
+      </div>
+      <div class="control">
+        <div class="glass">
+          <span class="panel-title">Controle térmico</span>
+          <div class="metrics">
+            <div class="metric"><small>Atual</small><b id="actualTemp">42°</b></div>
+            <div class="metric"><small>Alvo</small><b class="gold" id="targetTemp">80°</b></div>
+            <div class="metric"><small>Potência</small><b id="powerKw">9.0kW</b></div>
+          </div>
+          <div class="setrow"><button class="round" id="minus">−</button><strong id="setRead">80°C</strong><button class="round" id="plus">+</button></div>
+          <div class="bar"><span id="heatBar"></span></div>
+          <p class="notes" id="smartText">Aquecimento em progresso. O sistema monitora temperatura, consumo e tempo de uso.</p>
+        </div>
+        <div class="glass">
+          <span class="panel-title">Presets inteligentes</span>
+          <div class="presets" id="presets"></div>
+          <div class="service-grid">
+            <div class="service-item"><small>Resistência</small><b id="resType">Tubular blindada</b></div>
+            <div class="service-item"><small>Ligação</small><b id="connection">Monofásica / Trifásica</b></div>
+            <div class="service-item"><small>Aplicação</small><b id="application">Aquecimento constante</b></div>
+            <div class="service-item"><small>Alerta</small><b id="alertText">Revisar termostato e sensor</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="wa-section" id="waSection"></div>
+      <footer class="foot">
+        <span>WhatsApp: <b>(21) 96598-7979</b></span>
+        <span>Instagram: <b>@rp_resistencias</b></span>
+        <span>Endereço: <b>R. Visc. do Uruguai, 264 - Centro, Niterói/RJ</b></span>
+      </footer>
+    </aside>
+  </section>
+</div>
+
+<div class="install-banner" id="tip">
+  <p><b>Dica para a logo oficial:</b> salve o arquivo da marca como <b>logo-casa-rp.png</b> na mesma pasta deste HTML. O app aplica a imagem sem redesenhar.</p>
+  <button onclick="document.getElementById('tip').classList.add('hidden')">OK</button>
+</div>
+
+<script>
+const equipments = [
+  {id:'sauna-seca',name:'Sauna Seca',sector:'residencial comercial',power:'9.0kW',temp:42,target:80,min:40,max:95,step:5,desc:'Calor seco, pedras, resistência tubular e revisão técnica.',mini:'coil',scene:'sauna',res:'Tubular para sauna seca',conn:'Mono / Bi / Trifásica',app:'Pedras + ar quente',alert:'Confirmar potência e tensão',presets:[['Leve','60°C'],['Padrão','75°C'],['Intenso','90°C'],['Revisão','Teste']],note:'Para sauna seca, o visual destaca pedras, calor seco, resistência própria e assistência em todas as potências.'},
+  {id:'sauna-vapor',name:'Sauna a Vapor',sector:'residencial comercial',power:'6.0kW',temp:34,target:48,min:35,max:55,step:1,desc:'Gerador de vapor, resistência de imersão e sensor.',mini:'steamGen',scene:'steam',res:'Imersão / flangeada',conn:'Mono / Trifásica',app:'Gerador de vapor',alert:'Separar de sauna seca',presets:[['Leve','38°C'],['Conforto','45°C'],['Forte','50°C'],['Vapor','Auto']],note:'Para sauna a vapor, o app mostra gerador, tubulação, vapor e controle de temperatura mais baixa.'},
+  {id:'buffet',name:'Buffet Self-Service',sector:'comercial',power:'3.5kW',temp:54,target:65,min:45,max:90,step:5,desc:'Banho-maria, cuba GN, pista aquecida e manutenção.',mini:'cuba',scene:'banho',res:'Imersão inox / tubular',conn:'110V / 220V',app:'Água + cuba GN',alert:'Não trabalhar sem água',presets:[['Molhos','55°C'],['Buffet','65°C'],['Pico','75°C'],['Limpeza','Auto']],note:'Ideal para restaurantes: mantém alimento aquecido com cuba, banho-maria e resistência correta.'},
+  {id:'banho-maria',name:'Banho-Maria',sector:'comercial industrial hospitalar',power:'2.5kW',temp:46,target:60,min:35,max:95,step:5,desc:'Aquecimento de água em reservatório, cuba ou tanque.',mini:'tube',scene:'banho',res:'Imersão blindada inox',conn:'110V / 220V',app:'Água e soluções',alert:'Checar nível de água',presets:[['Baixo','45°C'],['Padrão','60°C'],['Alto','80°C'],['Sanit.','90°C']],note:'Base de aplicação para tanques, cubas, reservatórios, autoclaves e sistemas com água.'},
+  {id:'pista-quente',name:'Pista Quente',sector:'comercial',power:'4.0kW',temp:50,target:70,min:40,max:110,step:5,desc:'Superfície aquecida para buffet e atendimento contínuo.',mini:'cuba',scene:'track',res:'Tubular blindada / placa',conn:'220V',app:'Pista aquecida',alert:'Distribuir calor uniforme',presets:[['Standby','50°C'],['Serviço','70°C'],['Pico','85°C'],['Teste','Auto']],note:'Para pista quente, o app valoriza superfície aquecida, estabilidade térmica e tempo de serviço.'},
+  {id:'forno',name:'Forno Industrial',sector:'industrial comercial',power:'12kW',temp:128,target:180,min:80,max:300,step:10,desc:'Forno com resistência tubular, curva de calor e produção.',mini:'oven',scene:'oven',res:'Tubular para forno',conn:'Mono / Trifásica',app:'Câmara quente',alert:'Checar termostato e contator',presets:[['Frango','180°C'],['Peixe','170°C'],['Pão','190°C'],['Pizza','230°C'],['Secagem','120°C']],note:'O forno pode exibir presets estilo airfryer, curva de temperatura, tempo e manutenção das resistências.'},
+  {id:'piscina',name:'Aquecedor de Piscina',sector:'residencial comercial',power:'8.0kW',temp:25,target:30,min:24,max:36,step:1,desc:'Aquecimento de passagem com circulação da água.',mini:'pool',scene:'pool',res:'Flow-through / imersão',conn:'220V / Trifásica',app:'Água circulante',alert:'Confirmar vazão da bomba',presets:[['Lazer','28°C'],['Conforto','30°C'],['Spa','32°C'],['Eco','26°C']],note:'Mostra água circulando, aquecedor em linha, temperatura da piscina e economia de energia.'},
+  {id:'boiler',name:'Boiler / Aquecedor',sector:'residencial comercial industrial hospitalar',power:'5.5kW',temp:38,target:60,min:35,max:80,step:5,desc:'Reservatório, resistência de imersão, sensor e segurança.',mini:'boiler',scene:'boiler',res:'Flangeada / rosqueável',conn:'220V / Trifásica',app:'Reservatório de água',alert:'Aterramento obrigatório',presets:[['Eco','45°C'],['Banho','60°C'],['Hotel','70°C'],['Anti-bac.','75°C']],note:'Bom para casas, hotéis, cozinhas, hospitais e reservatórios com controle de segurança.'},
+  {id:'fritadeira',name:'Fritadeira Elétrica',sector:'comercial industrial',power:'5.0kW',temp:80,target:180,min:90,max:200,step:10,desc:'Cuba de óleo, resistência de imersão e termostato.',mini:'fryer',scene:'fryer',res:'Imersão para óleo',conn:'110V / 220V',app:'Óleo / fritura',alert:'Evitar aquecer sem óleo',presets:[['Leve','160°C'],['Padrão','180°C'],['Crocante','190°C'],['Limpeza','120°C']],note:'Voltado para lanchonetes, salgados e restaurantes. Mostra cuba, óleo e resistência aquecendo.'},
+  {id:'lava-loucas',name:'Lava-Louças Industrial',sector:'comercial industrial hospitalar',power:'4.5kW',temp:45,target:65,min:40,max:90,step:5,desc:'Aquecimento da água, enxágue, bomba e resistência.',mini:'dish',scene:'dish',res:'Tubular / flow-through',conn:'220V',app:'Água de lavagem',alert:'Checar sensor e bomba',presets:[['Lavagem','55°C'],['Enxágue','65°C'],['Higien.','80°C'],['Eco','45°C']],note:'Para cozinhas profissionais e hospitais: controle de água quente, segurança e higienização.'},
+  {id:'chuveiro',name:'Chuveiro Industrial',sector:'comercial industrial hospitalar',power:'15kW',temp:32,target:42,min:35,max:50,step:1,desc:'Aquecimento instantâneo para vestiários e academias.',mini:'boiler',scene:'boiler',res:'Monobloco / tubular instantânea',conn:'220V / Trifásica',app:'Água instantânea',alert:'Checar disjuntor e tensão',presets:[['Rápido','38°C'],['Conforto','42°C'],['Intenso','45°C'],['Eco','36°C']],note:'Para academias, hospitais e vestiários coletivos. Resistência instantânea, alta potência e segurança elétrica.'},
+  {id:'estufa',name:'Estufa de Secagem',sector:'industrial',power:'8.0kW',temp:85,target:110,min:60,max:200,step:10,desc:'Câmara de secagem e cura com resistência de ar forçado.',mini:'oven',scene:'oven',res:'Tubular aletada / fio resistivo',conn:'220V / Trifásica',app:'Ar quente forçado',alert:'Checar circulação de ar',presets:[['Tintas','80°C'],['Cura','110°C'],['Verniz','120°C'],['Catálise','150°C']],note:'Para indústrias de pintura, madeira e borracha. Alta uniformidade térmica com ar forçado.'},
+  {id:'caldeira',name:'Caldeira a Vapor',sector:'industrial',power:'18kW',temp:98,target:120,min:80,max:160,step:10,desc:'Geração de vapor saturado para processo industrial.',mini:'steamGen',scene:'steam',res:'Tubular de alta potência',conn:'Trifásica',app:'Vapor saturado',alert:'Pressão e válvula de segurança',presets:[['Baixa','100°C'],['Média','110°C'],['Alta','120°C'],['Autoclave','134°C']],note:'Para indústrias, lavanderias e autoclaves. Requer manutenção preventiva periódica com resistências originais.'},
+  {id:'aquecedor-ar',name:'Aquecedor de Ar',sector:'residencial comercial industrial',power:'6.0kW',temp:22,target:30,min:16,max:50,step:2,desc:'Resistência de fio para aquecimento de ambientes.',mini:'coil',scene:'sauna',res:'Fio resistivo / tubular para ar',conn:'110V / 220V',app:'Ar ambiente',alert:'Não obstruir saída de ar',presets:[['Econômico','22°C'],['Conforto','26°C'],['Inverno','30°C'],['Máx.','35°C']],note:'Para climatização de ambientes. Resistência de fio, alta durabilidade e fácil manutenção.'},
+  {id:'pasteurizador',name:'Pasteurizador',sector:'industrial comercial',power:'10kW',temp:55,target:72,min:40,max:85,step:1,desc:'Aquecimento preciso de líquidos para pasteurização contínua.',mini:'tube',scene:'banho',res:'Imersão / flow-through inox',conn:'220V / Trifásica',app:'Leite, sucos e líquidos',alert:'Temperatura e tempo exatos',presets:[['HTST','72°C'],['LTLT','63°C'],['UHT','85°C'],['Teste','55°C']],note:'Usado em laticínios, cervejarias e agroinústrías. Precisão é essencial para segurança alimentar.'},
+  {id:'passagem',name:'Aquecedor de Passagem',sector:'residencial comercial',power:'7.5kW',temp:30,target:42,min:30,max:50,step:2,desc:'Aquecimento instantâneo sem reservatório, baixo custo.',mini:'boiler',scene:'boiler',res:'Fio resistivo de alta densidade',conn:'220V',app:'Água instantânea',alert:'Confirmar vazão mínima',presets:[['Banho rápido','38°C'],['Conforto','42°C'],['Economia','35°C'],['Inverno','45°C']],note:'Versátil para residências e comércios. Sem reservatório, sem perda de calor em espera.'},
+  {id:'forno-confeitaria',name:'Forno de Confeitaria',sector:'comercial',power:'9.0kW',temp:140,target:170,min:100,max:220,step:10,desc:'Distribuição uniforme de calor para bolos e pães finos.',mini:'oven',scene:'oven',res:'Tubular para forno de lastro',conn:'220V / Trifásica',app:'Câmara uniforme',alert:'Checar resistência inferior',presets:[['Biscoito','150°C'],['Pão','170°C'],['Bolo','165°C'],['Merengue','100°C']],note:'Para confeitarias e padarias artesanais. Calor uniforme e controle preciso de temperatura.'},
+  {id:'extrusora',name:'Resistência de Extrusora',sector:'industrial',power:'14kW',temp:165,target:200,min:120,max:350,step:10,desc:'Banda ou tubular para cilindro e cabeçote de extrusora.',mini:'coil',scene:'oven',res:'Banda / tubular de cilindro',conn:'220V / Trifásica',app:'Plástico / borracha',alert:'Verificar isolamento e fixação',presets:[['PP','200°C'],['PE','220°C'],['PVC','180°C'],['Borracha','150°C']],note:'Para indústrias plásticas e de borracha. Alta temperatura, resistência banda e precisão de zona.'}
+];
+let current = equipments[0];
+let on = JSON.parse(localStorage.getItem('rpPower') || 'true');
+let filter = 'todos';
+const WA_PHONE = '5521965987979';
+const cards = document.getElementById('cards');
+const search = document.getElementById('search');
+
+function buildWaLink(eq, detailed = false) {
+  let situation = 'funcionando normalmente';
+  if (detailed) {
+    const diff = eq.temp - eq.target;
+    if (diff > 5) situation = `temperatura ACIMA do alvo (${Math.round(eq.temp)}°C, meta ${eq.target}°C) — possível falha no termostato`;
+    else if (diff < -8) situation = `temperatura ABAIXO do alvo (${Math.round(eq.temp)}°C, meta ${eq.target}°C) — resistência pode estar falhando`;
+  }
+  const msg = detailed
+    ? `Olá, Casa RP! 🔧\n\nPreciso de assistência técnica para:\n*${eq.name}*\nSetor: ${eq.sector.split(' ')[0]}\n\n📊 Situação atual:\n• Temperatura: ${Math.round(eq.temp)}°C (meta: ${eq.target}°C)\n• Potência: ${eq.power}\n• Resistência: ${eq.res}\n• Ligação: ${eq.conn}\n• Status: ${situation}\n\nAguardo contato! 😊`
+    : `Olá, Casa RP! 🔧\n\nPreciso de assistência para: *${eq.name}*\nResistência: ${eq.res}\nSetor: ${eq.sector.split(' ')[0]}\n\nAguardo retorno!`;
+  return `https://wa.me/${WA_PHONE}?text=${encodeURIComponent(msg)}`;
+}
+
+function renderCards(){
+  const q = search.value.toLowerCase().trim();
+  const list = equipments.filter(e => (filter==='todos'||e.sector.includes(filter)) && (!q||e.name.toLowerCase().includes(q)||e.desc.toLowerCase().includes(q)||e.res.toLowerCase().includes(q)));
+  cards.innerHTML = list.length ? list.map(e => `
+    <article class="card ${e.id===current.id?'active':''} ${on&&e.id===current.id?'on':''}" data-id="${e.id}" tabindex="0" role="button" aria-label="Abrir ${e.name}">
+      <div class="card-top"><span class="tag">${e.sector.split(' ')[0].toUpperCase()}</span><span class="mini-status">${e.id===current.id&&on?'AQUECENDO':'STANDBY'}</span></div>
+      <h3>${e.name}</h3><p>${e.desc}</p>
+      <div class="mini3d"><div class="obj ${e.mini}"></div><div class="heat-lines"><i></i><i></i><i></i></div></div>
+      <div class="card-foot"><span>${e.power}</span><a class="card-wa-btn" href="${buildWaLink(e)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📲 Assistência</a></div>
+    </article>`).join('') : `<div class="empty">Nenhum equipamento encontrado nesse filtro.</div>`;
+  document.querySelectorAll('.card').forEach(c=>{c.onclick=()=>selectEq(c.dataset.id);c.onkeydown=e=>{if(e.key==='Enter')selectEq(c.dataset.id)}});
+}
+function modelHTML(scene){
+  const tech = `<div class="tech"><i></i></div>`;
+  if(scene==='sauna') return `<div class="big-sauna"><div class="wood-wall"></div><div class="bench a"></div><div class="bench b"></div><div class="heater"><div class="rocks"><i></i><i></i><i></i><i></i></div><div class="res-glow hot"></div></div></div>${tech}`;
+  if(scene==='steam') return `<div class="big-steam"><div class="gen-box hot"></div><div class="steam-pipe"></div></div>${tech}`;
+  if(scene==='banho') return `<div class="big-banho"><div class="banho-cuba"></div><div class="banho-water"></div><div class="banho-res hot"></div></div>${tech}`;
+  if(scene==='track') return `<div class="big-track"><div class="track-top"></div><div class="banho-res hot" style="top:152px"></div></div>${tech}`;
+  if(scene==='oven') return `<div class="big-oven"><div class="oven-case"></div><div class="oven-door"></div><div class="oven-coil-big hot"></div></div>${tech}`;
+  if(scene==='pool') return `<div class="big-pool"><div class="pool-basin"></div><div class="pool-heater hot"></div></div>${tech}`;
+  if(scene==='boiler') return `<div class="big-boiler"><div class="boiler-body"></div><div class="boiler-heat hot"></div><div class="pipe one"></div><div class="pipe two"></div></div>${tech}`;
+  if(scene==='dish') return `<div class="big-dish"><div class="dish-case"></div><div class="dish-water"></div><div class="dish-res hot"></div></div>${tech}`;
+  return `<div class="big-fryer"><div class="fryer-case"></div><div class="oil"></div><div class="fryer-res hot"></div></div>${tech}`;
+}
+function selectEq(id){
+  current = equipments.find(e=>e.id===id) || equipments[0];
+  localStorage.setItem('rpEquipment', current.id);
+  updateDash(); renderCards();
+}
+function updateDash(){
+  document.getElementById('dashSector').textContent = current.sector.toUpperCase();
+  const srcBadge = current._real
+    ? `<span class="data-src real">● AO VIVO</span>`
+    : `<span class="data-src sim">● SIMULADO</span>`;
+  const alertBadge = current._alert
+    ? `<span class="alert-pill">⚠ ALERTA</span>`
+    : '';
+  document.getElementById('dashName').innerHTML = current.name + srcBadge + alertBadge;
+  document.getElementById('dashDesc').textContent = current.desc;
+  document.getElementById('actualTemp').textContent = Math.round(current.temp)+'°';
+  document.getElementById('targetTemp').textContent = Math.round(current.target)+'°';
+  document.getElementById('setRead').textContent = Math.round(current.target)+'°C';
+  document.getElementById('powerKw').textContent = current.power;
+  document.getElementById('smartText').textContent = current.note;
+  document.getElementById('resType').textContent = current.res;
+  document.getElementById('connection').textContent = current.conn;
+  document.getElementById('application').textContent = current.app;
+  document.getElementById('alertText').textContent = current.alert;
+  document.getElementById('sceneLabel').textContent = `SERVIÇO · ${current.res.toUpperCase()}`;
+  document.getElementById('mainModel').className = 'main-model '+(on?'on':'');
+  document.getElementById('mainModel').innerHTML = modelHTML(current.scene);
+  document.getElementById('power').classList.toggle('on', on);
+  const pct = Math.max(7, Math.min(100, (current.temp/current.target)*100));
+  document.getElementById('heatBar').style.width = pct+'%';
+  document.getElementById('presets').innerHTML = current.presets.map((p,i)=>`<button class="preset ${i===1?'active':''}" data-val="${p[1]}"><b>${p[0]}</b><small>${p[1]}</small></button>`).join('');
+  document.querySelectorAll('.preset').forEach(btn => btn.onclick = () => applyPreset(btn));
+  const waSection = document.getElementById('waSection');
+  if (waSection) {
+    const alertNote = current._alert && current._alertMsg ? `<p style="color:#f87171;font-size:11px;text-align:center;margin-bottom:8px;font-weight:700">⚠ ${current._alertMsg} — clique para chamar assistência</p>` : '';
+    waSection.innerHTML = alertNote + `<a class="wa-btn" href="${buildWaLink(current, true)}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M.057 24l1.687-6.163C.06 16.012.5 14.048.5 12 .5 5.6 5.6.5 12 .5S23.5 5.6 23.5 12 18.4 23.5 12 23.5c-2.081 0-4.01-.55-5.693-1.504L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.867-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>Chamar Assistência via WhatsApp</a>`;
+  }
+}
+function applyPreset(btn){
+  const m = btn.dataset.val.match(/(\d+)/);
+  if(m){ current.target = parseInt(m[1],10); }
+  document.querySelectorAll('.preset').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); updateDash();
+}
+document.getElementById('power').onclick = ()=>{on=!on;localStorage.setItem('rpPower',JSON.stringify(on));updateDash();renderCards();};
+document.getElementById('plus').onclick=()=>{current.target = Math.min(current.max, current.target + current.step); updateDash()};
+document.getElementById('minus').onclick=()=>{current.target = Math.max(current.min, current.target - current.step); updateDash()};
+document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{document.querySelectorAll('.chip').forEach(x=>x.classList.remove('active')); b.classList.add('active'); filter=b.dataset.filter; renderCards();});
+search.oninput=renderCards;
+function spawnFX(){
+  if(!on) return;
+  const p = document.getElementById('particles');
+  const el = document.createElement('span');
+  const vapor = ['sauna','steam','banho','pool','boiler','dish'].includes(current.scene);
+  el.className = vapor ? 'vapor' : 'fire';
+  el.style.left = (36+Math.random()*42)+'%'; el.style.top = (48+Math.random()*22)+'%';
+  el.style.setProperty('--x',(Math.random()*140-70)+'px'); el.style.setProperty('--y',(-90-Math.random()*95)+'px');
+  p.appendChild(el); setTimeout(()=>el.remove(),4300);
+}
+function tick(){
+  if(on){ current.temp += (current.target-current.temp)*0.045 + (Math.random()-.5)*0.35; }
+  else { current.temp += (24-current.temp)*0.025; }
+  updateDash();
+}
+function clock(){
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+const last = localStorage.getItem('rpEquipment');
+if(last && equipments.some(e=>e.id===last)) current = equipments.find(e=>e.id===last);
+
+async function pollRealData() {
+  try {
+    const r = await fetch(`/api/equipment/${current.id}/telemetry`);
+    if (!r.ok) return;
+    const t = await r.json();
+    if (t.source === 'real') {
+      current.temp = t.currentTemp;
+      current._real = true;
+      current._alert = t.alert;
+      current._alertMsg = t.alertMessage;
+    } else {
+      current._real = false;
+      current._alert = false;
+      current._alertMsg = null;
+    }
+    updateDash();
+  } catch { /* sem internet ou servidor off — mantém simulação */ }
+}
+
+setInterval(tick, 900); setInterval(spawnFX, 560); setInterval(clock, 1000);
+setInterval(pollRealData, 30000);
+renderCards(); updateDash(); clock();
+pollRealData();
+</script>
+</body>
+</html>
