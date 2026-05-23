@@ -1,0 +1,24 @@
+{
+  "name": "casa-rp-thermo",
+  "version": "1.0.0",
+  "description": "App multi-equipamentos Casa RP Thermo para controle, orçamento e simulação térmica.",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "casa-rp",
+    "thermo",
+    "sauna",
+    "boiler",
+    "forno",
+    "banho-maria",
+    "aquecedor"
+  ]
+}

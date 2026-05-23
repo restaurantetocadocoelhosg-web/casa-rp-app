@@ -1,0 +1,9 @@
+{
+  "name": "Casa RP Thermo",
+  "short_name": "RP Thermo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0c0c0e",
+  "theme_color": "#ff6b35",
+  "description": "Controle e orçamento para equipamentos térmicos Casa RP Resistências."
+}
