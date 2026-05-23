@@ -1,6 +1,7 @@
 'use strict';
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -10,8 +11,10 @@ const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const SENSOR_TOKEN = process.env.SENSOR_TOKEN || null;
+const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || null;
 const TELEMETRY_FRESH_MS = 5 * 60 * 1000;
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 min entre alertas por equipamento
 
 const ADMIN_USER = process.env.ADMIN_USER || 'casarp';
 const ADMIN_PASS = process.env.ADMIN_PASS || 'casarp2025';
@@ -63,6 +66,7 @@ const equipment = [
 
 const realTelemetry = new Map();
 const sessions = new Map();
+const alertCooldown = new Map();
 
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
@@ -125,6 +129,37 @@ function readBody(req) {
     });
     req.on('error', reject);
   });
+}
+
+// Dispara webhook n8n com cooldown de 5 min por equipamento
+function dispararAlertaN8n(payload) {
+  if (!N8N_WEBHOOK_URL) return;
+
+  const agora = Date.now();
+  const ultimoAlerta = alertCooldown.get(payload.equipmentId) || 0;
+  if (agora - ultimoAlerta < ALERT_COOLDOWN_MS) return;
+  alertCooldown.set(payload.equipmentId, agora);
+
+  try {
+    const body = JSON.stringify({ body: payload });
+    const url = new URL(N8N_WEBHOOK_URL);
+    const lib = url.protocol === 'https:' ? https : http;
+    const opts = {
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+    };
+    const req = lib.request(opts, res => {
+      console.log(`[n8n] Alerta enviado: ${payload.equipmentId} (${payload.temp}°C) → HTTP ${res.statusCode}`);
+    });
+    req.on('error', err => console.error('[n8n] Erro webhook:', err.message));
+    req.write(body);
+    req.end();
+  } catch (err) {
+    console.error('[n8n] Erro ao montar requisição:', err.message);
+  }
 }
 
 function simulateTelemetry(eq) {
@@ -222,10 +257,27 @@ async function handleApi(req, res, pathname) {
     if (!id || typeof temp !== 'number') return sendJson(res, 400, { error: 'Campos obrigatórios: id (string), temp (number)' });
     const eq = equipment.find(e => e.id === id);
     if (!eq) return sendJson(res, 404, { error: 'Equipamento não encontrado' });
+
     realTelemetry.set(id, { temp, humidity, voltage, clientName, receivedAt: Date.now() });
+
     const deviation = Math.abs(temp - eq.target);
     const alert = deviation > eq.alertThreshold;
-    return sendJson(res, 200, { ok: true, equipmentId: id, temp, alert, alertMessage: alert ? `Desvio de ${deviation.toFixed(1)}°C do alvo (${eq.target}°C)` : null, receivedAt: new Date().toISOString() });
+    const alertMessage = alert ? `Desvio de ${deviation.toFixed(1)}°C do alvo (${eq.target}°C)` : null;
+
+    if (alert) {
+      dispararAlertaN8n({
+        equipmentId: id,
+        equipment: eq.name,
+        temp,
+        targetTemp: eq.target,
+        alert,
+        alertMessage,
+        clientName: clientName || null,
+        receivedAt: new Date().toISOString()
+      });
+    }
+
+    return sendJson(res, 200, { ok: true, equipmentId: id, temp, alert, alertMessage, receivedAt: new Date().toISOString() });
   }
 
   if (req.method === 'GET' && pathname === '/api/alerts') {
@@ -284,7 +336,6 @@ const server = http.createServer(async (req, res) => {
     const filePath = safePath(pathname);
     if (!filePath.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end('Acesso negado'); }
 
-    // Deriva o content-type do arquivo real, não do pathname (ex: '/' → 'index.html')
     const ext = path.extname(filePath).toLowerCase();
 
     fs.readFile(filePath, (err, data) => {
@@ -312,4 +363,5 @@ server.listen(PORT, HOST, () => {
   console.log(`Credenciais padrão — usuário: ${ADMIN_USER} | senha: ${ADMIN_PASS}`);
   console.log('Defina ADMIN_USER e ADMIN_PASS nas variáveis de ambiente para trocar.');
   if (SENSOR_TOKEN) console.log('Sensor token ativo — ESP32 deve enviar header X-Sensor-Token.');
+  if (N8N_WEBHOOK_URL) console.log(`Alertas n8n ativos → ${N8N_WEBHOOK_URL}`);
 });
