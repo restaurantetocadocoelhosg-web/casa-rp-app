@@ -273,8 +273,8 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const ext = path.extname(pathname).toLowerCase();
-    const isAsset = ['.png','.jpg','.jpeg','.svg','.ico','.webmanifest','.txt'].includes(ext);
+    const pathnameExt = path.extname(pathname).toLowerCase();
+    const isAsset = ['.png','.jpg','.jpeg','.svg','.ico','.webmanifest','.txt'].includes(pathnameExt);
 
     if (!isAsset && !isAuthenticated(req)) {
       res.writeHead(302, { Location: '/login' });
@@ -283,6 +283,9 @@ const server = http.createServer(async (req, res) => {
 
     const filePath = safePath(pathname);
     if (!filePath.startsWith(PUBLIC_DIR)) { res.writeHead(403); return res.end('Acesso negado'); }
+
+    // Deriva o content-type do arquivo real, não do pathname (ex: '/' → 'index.html')
+    const ext = path.extname(filePath).toLowerCase();
 
     fs.readFile(filePath, (err, data) => {
       if (err) {
