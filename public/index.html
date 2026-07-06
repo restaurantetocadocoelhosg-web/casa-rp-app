@@ -35,6 +35,15 @@ button,input{font:inherit} button{cursor:pointer}.mono{font-family:'DM Mono',mon
 .data-src.sim{background:rgba(145,160,183,.1);color:var(--muted);border:1px solid rgba(145,160,183,.25)}
 .alert-pill{background:rgba(240,82,82,.18);color:#f87171;border:1px solid rgba(240,82,82,.4);border-radius:99px;font:900 9px 'DM Mono',monospace;padding:3px 8px;vertical-align:middle;margin-left:6px;animation:pulse 1.4s infinite}
 .wa-section{padding:0 18px 18px}
+.alert-banner{display:none;margin-top:14px;border:1px solid rgba(240,82,82,.5);background:rgba(240,82,82,.12);border-radius:18px;padding:12px 16px;align-items:center;gap:12px;flex-wrap:wrap}
+.alert-banner.show{display:flex}
+.alert-banner .ico{font-size:20px;animation:pulse 1.4s infinite}
+.alert-banner p{font-size:13px;color:#fecaca;line-height:1.4;flex:1;min-width:200px}
+.alert-banner button{border:1px solid rgba(240,82,82,.55);background:rgba(240,82,82,.18);color:#fca5a5;border-radius:12px;padding:8px 12px;font-weight:900;font-size:12px}
+.hist-wrap{margin-top:14px}
+.hist-wrap small{display:block;color:var(--muted);font:800 10px 'DM Mono',monospace;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+#histChart{width:100%;height:74px;display:block;border:1px solid var(--line);border-radius:14px;background:rgba(5,9,20,.35)}
+.hist-empty{color:var(--muted);font-size:11px;padding:8px 2px}
 @media(max-width:1160px){.shell{grid-template-columns:1fr}.dash{min-height:auto}.grid{grid-template-columns:repeat(2,1fr)}.dash{order:-1}.topbar{align-items:flex-start}.online{display:none}}
 @media(max-width:700px){.app{padding:10px}.topbar{border-radius:20px}.brand-logo{width:48px;height:48px;flex-basis:48px}.brand-title{font-size:17px}.brand-sub{font-size:10px}.home-head{padding:20px}.home-head h1{font-size:34px}.grid{grid-template-columns:1fr;padding:14px}.card{min-height:235px}.tools{display:grid;grid-template-columns:1fr 1fr}.search{grid-column:1/-1;max-width:none;min-width:0;margin-left:0}.dash-top{padding:20px}.dash-title h2{font-size:30px}.stage{min-height:330px}.main-model{transform:scale(.78)}.control{grid-template-columns:1fr;padding:14px}.foot{grid-template-columns:1fr}.install-banner{left:10px;right:10px;bottom:10px}.metrics{grid-template-columns:1fr 1fr 1fr}.metric b{font-size:20px}}
 </style>
@@ -52,8 +61,14 @@ button,input{font:inherit} button{cursor:pointer}.mono{font-family:'DM Mono',mon
         <div class="brand-sub mono">controle térmico inteligente para vários equipamentos</div>
       </div>
     </div>
-    <div class="online"><span class="led"></span><span id="clock">--:--</span> · DEMO ONLINE</div>
+    <div class="online"><span class="led"></span><span id="clock">--:--</span> · <span id="liveChip">DEMO ONLINE</span></div>
   </header>
+
+  <div class="alert-banner" id="alertBanner" role="alert">
+    <span class="ico">⚠️</span>
+    <p id="alertBannerText"></p>
+    <button id="alertBannerBtn" type="button">Ver equipamento</button>
+  </div>
 
   <section class="shell">
     <main class="panel">
@@ -97,6 +112,11 @@ button,input{font:inherit} button{cursor:pointer}.mono{font-family:'DM Mono',mon
           </div>
           <div class="setrow"><button class="round" id="minus">−</button><strong id="setRead">80°C</strong><button class="round" id="plus">+</button></div>
           <div class="bar"><span id="heatBar"></span></div>
+          <div class="hist-wrap">
+            <small>Histórico do sensor (24h)</small>
+            <canvas id="histChart" width="600" height="148" aria-label="Gráfico do histórico de temperatura"></canvas>
+            <div class="hist-empty" id="histEmpty">Sem leituras reais ainda — o gráfico aparece quando o sensor ESP32 enviar dados.</div>
+          </div>
           <p class="notes" id="smartText">Aquecimento em progresso. O sistema monitora temperatura, consumo e tempo de uso.</p>
         </div>
         <div class="glass">
@@ -279,10 +299,68 @@ async function pollRealData() {
   } catch { /* sem internet ou servidor off — mantém simulação */ }
 }
 
+// ---- Histórico do sensor (sparkline) ----
+async function pollHistory() {
+  const cv = document.getElementById('histChart');
+  const empty = document.getElementById('histEmpty');
+  try {
+    const r = await fetch(`/api/equipment/${current.id}/history`);
+    if (!r.ok) return;
+    const d = await r.json();
+    const h = d.history || [];
+    if (h.length < 2) { cv.style.display = 'none'; empty.style.display = 'block'; return; }
+    cv.style.display = 'block'; empty.style.display = 'none';
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height, pad = 10;
+    ctx.clearRect(0, 0, W, H);
+    const temps = h.map(p => p.temp);
+    const min = Math.min(...temps, d.target) - 3, max = Math.max(...temps, d.target) + 3;
+    const x = i => pad + (i / (h.length - 1)) * (W - pad * 2);
+    const y = t => H - pad - ((t - min) / (max - min)) * (H - pad * 2);
+    // linha do alvo
+    ctx.strokeStyle = 'rgba(255,189,23,.45)'; ctx.setLineDash([6, 5]); ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(pad, y(d.target)); ctx.lineTo(W - pad, y(d.target)); ctx.stroke();
+    ctx.setLineDash([]);
+    // curva de temperatura
+    ctx.strokeStyle = '#37b6ff'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+    ctx.beginPath(); h.forEach((p, i) => i ? ctx.lineTo(x(i), y(p.temp)) : ctx.moveTo(x(0), y(p.temp))); ctx.stroke();
+    // último ponto
+    const lx = x(h.length - 1), ly = y(h[h.length - 1].temp);
+    ctx.fillStyle = '#ffbd17'; ctx.beginPath(); ctx.arc(lx, ly, 5, 0, Math.PI * 2); ctx.fill();
+  } catch { /* offline: mantém último desenho */ }
+}
+
+// ---- Visão geral: chip AO VIVO + banner de alertas ----
+async function pollOverview() {
+  try {
+    const r = await fetch('/api/overview');
+    if (!r.ok) return;
+    const d = await r.json();
+    const chip = document.getElementById('liveChip');
+    chip.textContent = d.live > 0 ? `AO VIVO · ${d.live} SENSOR${d.live > 1 ? 'ES' : ''}` : 'DEMO ONLINE';
+    const banner = document.getElementById('alertBanner');
+    if (d.alerts && d.alerts.length) {
+      const a = d.alerts[0];
+      document.getElementById('alertBannerText').textContent =
+        (d.alerts.length > 1 ? `${d.alerts.length} equipamentos em alerta. Primeiro: ` : '') +
+        `${a.name}: ${a.alertMessage || 'desvio de temperatura'} (${Math.round(a.temp)}°C)`;
+      document.getElementById('alertBannerBtn').onclick = () => { selectEq(a.id); pollRealData(); pollHistory(); };
+      banner.classList.add('show');
+    } else {
+      banner.classList.remove('show');
+    }
+  } catch { /* offline */ }
+}
+
+const _selectEqOriginal = selectEq;
+selectEq = function (id) { _selectEqOriginal(id); pollHistory(); };
+
 setInterval(tick, 900); setInterval(spawnFX, 560); setInterval(clock, 1000);
 setInterval(pollRealData, 30000);
+setInterval(pollHistory, 60000);
+setInterval(pollOverview, 30000);
 renderCards(); updateDash(); clock();
-pollRealData();
+pollRealData(); pollHistory(); pollOverview();
 </script>
 </body>
 </html>

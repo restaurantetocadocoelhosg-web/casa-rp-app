@@ -17,7 +17,14 @@ const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const ALERT_COOLDOWN_MS = 5 * 60 * 1000; // 5 min entre alertas por equipamento
 
 const ADMIN_USER = process.env.ADMIN_USER || 'casarp';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'casarp2025';
+// Sem senha padrão hardcoded: se a env não existir, gera uma aleatória e loga
+// (defina ADMIN_PASS no Railway para manter a sua senha)
+const ADMIN_PASS = process.env.ADMIN_PASS || crypto.randomBytes(9).toString('base64url');
+const ADMIN_PASS_GERADA = !process.env.ADMIN_PASS;
+
+const HISTORY_MAX = 288;            // ~24h de leituras a cada 5 min
+const LOGIN_MAX_TENTATIVAS = 8;     // por IP por minuto
+const LOGIN_JANELA_MS = 60 * 1000;
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
@@ -65,8 +72,22 @@ const equipment = [
 ];
 
 const realTelemetry = new Map();
+const telemetryHistory = new Map(); // id -> [{temp, at}] (últimas HISTORY_MAX leituras)
 const sessions = new Map();
 const alertCooldown = new Map();
+const loginAttempts = new Map();    // ip -> {count, resetAt}
+
+function loginBloqueado(req) {
+  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const agora = Date.now();
+  const reg = loginAttempts.get(ip);
+  if (!reg || reg.resetAt < agora) {
+    loginAttempts.set(ip, { count: 1, resetAt: agora + LOGIN_JANELA_MS });
+    return false;
+  }
+  reg.count += 1;
+  return reg.count > LOGIN_MAX_TENTATIVAS;
+}
 
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
@@ -93,8 +114,9 @@ function isAuthenticated(req) {
   return true;
 }
 
-function sessionCookie(token, maxAge) {
-  return `rpSession=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
+function sessionCookie(token, maxAge, req) {
+  const https = req && (req.headers['x-forwarded-proto'] === 'https');
+  return `rpSession=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax${https ? '; Secure' : ''}`;
 }
 
 function safePath(pathname) {
@@ -210,13 +232,16 @@ async function handleApi(req, res, pathname) {
   }
 
   if (req.method === 'POST' && pathname === '/api/login') {
+    if (loginBloqueado(req)) {
+      return sendJson(res, 429, { error: 'Muitas tentativas. Aguarde 1 minuto e tente de novo.' });
+    }
     const body = await readBody(req);
     if (body.user === ADMIN_USER && body.pass === ADMIN_PASS) {
       const token = generateToken();
       sessions.set(token, { user: body.user, expiresAt: Date.now() + SESSION_TTL_MS });
       res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
-        'Set-Cookie': sessionCookie(token, SESSION_TTL_MS / 1000),
+        'Set-Cookie': sessionCookie(token, SESSION_TTL_MS / 1000, req),
         'Cache-Control': 'no-store'
       });
       return res.end(JSON.stringify({ ok: true, user: body.user }));
@@ -229,24 +254,14 @@ async function handleApi(req, res, pathname) {
     sessions.delete(token);
     res.writeHead(200, {
       'Content-Type': 'application/json; charset=utf-8',
-      'Set-Cookie': sessionCookie('', 0),
+      'Set-Cookie': sessionCookie('', 0, req),
       'Cache-Control': 'no-store'
     });
     return res.end(JSON.stringify({ ok: true }));
   }
 
-  if (!isAuthenticated(req)) {
-    return sendJson(res, 401, { error: 'Sessão inválida. Faça login novamente.' });
-  }
-
-  if (req.method === 'GET' && pathname === '/api/config') {
-    return sendJson(res, 200, { business, equipment });
-  }
-
-  if (req.method === 'GET' && pathname === '/api/equipment') {
-    return sendJson(res, 200, equipment);
-  }
-
+  // /api/sensor fica ANTES do gate de sessão: o ESP32 autentica por SENSOR_TOKEN,
+  // não por cookie (antes disso o sensor real tomava 401 e nunca entrava dado real)
   if (req.method === 'POST' && pathname === '/api/sensor') {
     if (SENSOR_TOKEN) {
       const auth = req.headers['authorization'] || req.headers['x-sensor-token'] || '';
@@ -259,6 +274,11 @@ async function handleApi(req, res, pathname) {
     if (!eq) return sendJson(res, 404, { error: 'Equipamento não encontrado' });
 
     realTelemetry.set(id, { temp, humidity, voltage, clientName, receivedAt: Date.now() });
+
+    const hist = telemetryHistory.get(id) || [];
+    hist.push({ temp, at: Date.now() });
+    if (hist.length > HISTORY_MAX) hist.splice(0, hist.length - HISTORY_MAX);
+    telemetryHistory.set(id, hist);
 
     const deviation = Math.abs(temp - eq.target);
     const alert = deviation > eq.alertThreshold;
@@ -280,9 +300,38 @@ async function handleApi(req, res, pathname) {
     return sendJson(res, 200, { ok: true, equipmentId: id, temp, alert, alertMessage, receivedAt: new Date().toISOString() });
   }
 
+  if (!isAuthenticated(req)) {
+    return sendJson(res, 401, { error: 'Sessão inválida. Faça login novamente.' });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/config') {
+    return sendJson(res, 200, { business, equipment });
+  }
+
+  if (req.method === 'GET' && pathname === '/api/equipment') {
+    return sendJson(res, 200, equipment);
+  }
+
   if (req.method === 'GET' && pathname === '/api/alerts') {
     const alerts = equipment.map(eq => getTelemetry(eq)).filter(t => t.source === 'real' && t.alert);
     return sendJson(res, 200, { count: alerts.length, alerts });
+  }
+
+  // Visão geral: status de todos os equipamentos (p/ badges dos cards e chip do topo)
+  if (req.method === 'GET' && pathname === '/api/overview') {
+    const items = equipment.map(eq => {
+      const t = getTelemetry(eq);
+      return { id: t.equipmentId, source: t.source, temp: t.currentTemp, alert: t.alert, alertMessage: t.alertMessage, name: t.name };
+    });
+    const reais = items.filter(i => i.source === 'real');
+    return sendJson(res, 200, { live: reais.length, alerts: reais.filter(i => i.alert), items });
+  }
+
+  const historyMatch = pathname.match(/^\/api\/equipment\/([^/]+)\/history$/);
+  if (req.method === 'GET' && historyMatch) {
+    const eq = equipment.find(e => e.id === historyMatch[1]);
+    if (!eq) return sendJson(res, 404, { error: 'Equipamento não encontrado' });
+    return sendJson(res, 200, { equipmentId: eq.id, target: eq.target, history: telemetryHistory.get(eq.id) || [] });
   }
 
   const telemetryMatch = pathname.match(/^\/api\/equipment\/([^/]+)\/telemetry$/);
@@ -360,8 +409,10 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`${business.appName} rodando em http://${HOST}:${PORT}`);
-  console.log(`Credenciais padrão — usuário: ${ADMIN_USER} | senha: ${ADMIN_PASS}`);
-  console.log('Defina ADMIN_USER e ADMIN_PASS nas variáveis de ambiente para trocar.');
+  if (ADMIN_PASS_GERADA) {
+    console.log(`⚠ ADMIN_PASS não definida no ambiente — senha temporária desta execução: ${ADMIN_PASS}`);
+    console.log('  Defina ADMIN_USER e ADMIN_PASS nas variáveis do Railway para uma senha fixa.');
+  }
   if (SENSOR_TOKEN) console.log('Sensor token ativo — ESP32 deve enviar header X-Sensor-Token.');
   if (N8N_WEBHOOK_URL) console.log(`Alertas n8n ativos → ${N8N_WEBHOOK_URL}`);
 });
