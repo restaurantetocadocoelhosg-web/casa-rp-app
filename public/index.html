@@ -30,6 +30,8 @@ button,input{font:inherit} button{cursor:pointer}.mono{font-family:'DM Mono',mon
 .wa-btn svg{width:18px;height:18px;flex:0 0 18px;fill:currentColor}
 .card-wa-btn{background:#25d366;border:none;border-radius:9px;padding:5px 9px;color:#fff;font:900 10px 'DM Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;gap:4px;text-decoration:none;transition:.15s;white-space:nowrap}
 .card-wa-btn:hover{background:#1ebe5d;transform:scale(1.04)}
+.mini-foto{width:100%;height:100%;object-fit:cover;object-position:center 32%;border-radius:16px;border:1px solid var(--line);transition:transform .4s ease}
+.card:hover .mini-foto{transform:scale(1.05)}
 .data-src{font:900 9px 'DM Mono',monospace;border-radius:99px;padding:3px 8px;vertical-align:middle;margin-left:6px}
 .data-src.real{background:rgba(74,222,128,.15);color:var(--green);border:1px solid rgba(74,222,128,.35)}
 .data-src.sim{background:rgba(145,160,183,.1);color:var(--muted);border:1px solid rgba(145,160,183,.25)}
@@ -166,6 +168,24 @@ const equipments = [
   {id:'forno-confeitaria',name:'Forno de Confeitaria',sector:'comercial',power:'9.0kW',temp:140,target:170,min:100,max:220,step:10,desc:'Distribuição uniforme de calor para bolos e pães finos.',mini:'oven',scene:'oven',res:'Tubular para forno de lastro',conn:'220V / Trifásica',app:'Câmara uniforme',alert:'Checar resistência inferior',presets:[['Biscoito','150°C'],['Pão','170°C'],['Bolo','165°C'],['Merengue','100°C']],note:'Para confeitarias e padarias artesanais. Calor uniforme e controle preciso de temperatura.'},
   {id:'extrusora',name:'Resistência de Extrusora',sector:'industrial',power:'14kW',temp:165,target:200,min:120,max:350,step:10,desc:'Banda ou tubular para cilindro e cabeçote de extrusora.',mini:'coil',scene:'oven',res:'Banda / tubular de cilindro',conn:'220V / Trifásica',app:'Plástico / borracha',alert:'Verificar isolamento e fixação',presets:[['PP','200°C'],['PE','220°C'],['PVC','180°C'],['Borracha','150°C']],note:'Para indústrias plásticas e de borracha. Alta temperatura, resistência banda e precisão de zona.'}
 ];
+// Fotos reais da Casa RP (bucket público Supabase — mesmas artes do Instagram)
+const FOTO_BASE = 'https://zuwdgyvbuaocbzckhhlm.supabase.co/storage/v1/object/public/posts-instagram/rp_resistencias/biblioteca/';
+const FOTOS = {
+  'sauna-seca':        'stories-24-05-11h.jpeg',
+  'sauna-vapor':       'feed-16-05-20h.jpeg',
+  'buffet':            'stories-07-05-10h.jpeg',
+  'banho-maria':       'stories-08-05-13h.jpeg',
+  'forno':             'feed-19-05-11h.jpeg',
+  'forno-confeitaria': 'feed-06-05-11h.jpeg',
+  'fritadeira':        'stories-27-05-14h.jpeg',
+  'boiler':            'feed-17-05-11h.jpeg',
+  'chuveiro':          'feed-16-05-11h.jpeg',
+  'caldeira':          'feed-16-05-20h.jpeg',
+  'estufa':            'feed-04-05-14h.jpeg',
+  'extrusora':         'feed-21-05-11h.jpeg',
+  'pasteurizador':     'feed-07-05-11h.jpeg',
+  'aquecedor-ar':      'feed-20-05-11h.jpeg'
+};
 let current = equipments[0];
 let on = JSON.parse(localStorage.getItem('rpPower') || 'true');
 let filter = 'todos';
@@ -193,7 +213,9 @@ function renderCards(){
     <article class="card ${e.id===current.id?'active':''} ${on&&e.id===current.id?'on':''}" data-id="${e.id}" tabindex="0" role="button" aria-label="Abrir ${e.name}">
       <div class="card-top"><span class="tag">${e.sector.split(' ')[0].toUpperCase()}</span><span class="mini-status">${e.id===current.id&&on?'AQUECENDO':'STANDBY'}</span></div>
       <h3>${e.name}</h3><p>${e.desc}</p>
-      <div class="mini3d"><div class="obj ${e.mini}"></div><div class="heat-lines"><i></i><i></i><i></i></div></div>
+      <div class="mini3d">${FOTOS[e.id]
+        ? `<img class="mini-foto" src="${FOTO_BASE}${FOTOS[e.id]}" alt="${e.name} — Casa RP" loading="lazy" />`
+        : `<div class="obj ${e.mini}"></div><div class="heat-lines"><i></i><i></i><i></i></div>`}</div>
       <div class="card-foot"><span>${e.power}</span><a class="card-wa-btn" href="${buildWaLink(e)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">📲 Assistência</a></div>
     </article>`).join('') : `<div class="empty">Nenhum equipamento encontrado nesse filtro.</div>`;
   document.querySelectorAll('.card').forEach(c=>{c.onclick=()=>selectEq(c.dataset.id);c.onkeydown=e=>{if(e.key==='Enter')selectEq(c.dataset.id)}});
@@ -237,6 +259,11 @@ function updateDash(){
   document.getElementById('sceneLabel').textContent = `SERVIÇO · ${current.res.toUpperCase()}`;
   document.getElementById('mainModel').className = 'main-model '+(on?'on':'');
   document.getElementById('mainModel').innerHTML = modelHTML(current.scene);
+  // foto real de fundo no palco (com véu escuro pra manter o modelo legível)
+  const stageEl = document.getElementById('stage');
+  stageEl.style.background = FOTOS[current.id]
+    ? `linear-gradient(180deg, rgba(5,9,20,.84), rgba(5,9,20,.9)), url("${FOTO_BASE}${FOTOS[current.id]}") center 30%/cover no-repeat`
+    : '';
   document.getElementById('power').classList.toggle('on', on);
   const pct = Math.max(7, Math.min(100, (current.temp/current.target)*100));
   document.getElementById('heatBar').style.width = pct+'%';
