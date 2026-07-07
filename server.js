@@ -26,6 +26,49 @@ const HISTORY_MAX = 288;            // ~24h de leituras a cada 5 min
 const LOGIN_MAX_TENTATIVAS = 8;     // por IP por minuto
 const LOGIN_JANELA_MS = 60 * 1000;
 
+// Persistência do histórico no Supabase (tabela thermo_leituras)
+const SUPABASE_URL = process.env.SUPABASE_URL || null;
+const SUPABASE_KEY = process.env.SUPABASE_KEY || null;
+const supabaseAtivo = Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+function supabaseHeaders(extra) {
+  return Object.assign({
+    apikey: SUPABASE_KEY,
+    Authorization: `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json'
+  }, extra || {});
+}
+
+// grava sem travar a resposta do sensor; erro só vai pro log
+function gravarLeituraSupabase(leitura) {
+  if (!supabaseAtivo) return;
+  fetch(`${SUPABASE_URL}/rest/v1/thermo_leituras`, {
+    method: 'POST',
+    headers: supabaseHeaders({ Prefer: 'return=minimal' }),
+    body: JSON.stringify(leitura)
+  }).then(r => {
+    if (!r.ok) console.error(`[supabase] insert falhou: HTTP ${r.status}`);
+  }).catch(err => console.error('[supabase] insert erro:', err.message));
+}
+
+async function historicoSupabase(equipmentId) {
+  if (!supabaseAtivo) return null;
+  try {
+    const desde = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const url = `${SUPABASE_URL}/rest/v1/thermo_leituras` +
+      `?equipment_id=eq.${encodeURIComponent(equipmentId)}` +
+      `&created_at=gte.${encodeURIComponent(desde)}` +
+      `&select=temp,created_at&order=created_at.asc&limit=${HISTORY_MAX}`;
+    const r = await fetch(url, { headers: supabaseHeaders() });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return rows.map(x => ({ temp: Number(x.temp), at: new Date(x.created_at).getTime() }));
+  } catch (err) {
+    console.error('[supabase] history erro:', err.message);
+    return null;
+  }
+}
+
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -280,6 +323,13 @@ async function handleApi(req, res, pathname) {
     if (hist.length > HISTORY_MAX) hist.splice(0, hist.length - HISTORY_MAX);
     telemetryHistory.set(id, hist);
 
+    gravarLeituraSupabase({
+      equipment_id: id, temp,
+      humidity: (typeof humidity === 'number') ? humidity : null,
+      voltage: (typeof voltage === 'number') ? voltage : null,
+      client_name: clientName || null
+    });
+
     const deviation = Math.abs(temp - eq.target);
     const alert = deviation > eq.alertThreshold;
     const alertMessage = alert ? `Desvio de ${deviation.toFixed(1)}°C do alvo (${eq.target}°C)` : null;
@@ -331,7 +381,10 @@ async function handleApi(req, res, pathname) {
   if (req.method === 'GET' && historyMatch) {
     const eq = equipment.find(e => e.id === historyMatch[1]);
     if (!eq) return sendJson(res, 404, { error: 'Equipamento não encontrado' });
-    return sendJson(res, 200, { equipmentId: eq.id, target: eq.target, history: telemetryHistory.get(eq.id) || [] });
+    // fonte primária: Supabase (sobrevive a redeploy); fallback: memória
+    const doBanco = await historicoSupabase(eq.id);
+    const history = (doBanco && doBanco.length) ? doBanco : (telemetryHistory.get(eq.id) || []);
+    return sendJson(res, 200, { equipmentId: eq.id, target: eq.target, history, source: (doBanco && doBanco.length) ? 'supabase' : 'memoria' });
   }
 
   const telemetryMatch = pathname.match(/^\/api\/equipment\/([^/]+)\/telemetry$/);
