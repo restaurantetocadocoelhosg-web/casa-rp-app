@@ -4,6 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <meta name="theme-color" content="#050914" />
+<link rel="manifest" href="/manifest.webmanifest" />
+<link rel="icon" href="/icons/icon-192.png" />
+<link rel="apple-touch-icon" href="/icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="RP Thermo" />
 <title>CASA RP THERMO — Painel Multi-Equipamentos</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -48,9 +54,34 @@ button,input{font:inherit} button{cursor:pointer}.mono{font-family:'DM Mono',mon
 .hist-empty{color:var(--muted);font-size:11px;padding:8px 2px}
 @media(max-width:1160px){.shell{grid-template-columns:1fr}.dash{min-height:auto}.grid{grid-template-columns:repeat(2,1fr)}.dash{order:-1}.topbar{align-items:flex-start}.online{display:none}}
 @media(max-width:700px){.app{padding:10px}.topbar{border-radius:20px}.brand-logo{width:48px;height:48px;flex-basis:48px}.brand-title{font-size:17px}.brand-sub{font-size:10px}.home-head{padding:20px}.home-head h1{font-size:34px}.grid{grid-template-columns:1fr;padding:14px}.card{min-height:235px}.tools{display:grid;grid-template-columns:1fr 1fr}.search{grid-column:1/-1;max-width:none;min-width:0;margin-left:0}.dash-top{padding:20px}.dash-title h2{font-size:30px}.stage{min-height:330px}.main-model{transform:scale(.78)}.control{grid-template-columns:1fr;padding:14px}.foot{grid-template-columns:1fr}.install-banner{left:10px;right:10px;bottom:10px}.metrics{grid-template-columns:1fr 1fr 1fr}.metric b{font-size:20px}}
+
+/* ===== Splash ===== */
+#splash{position:fixed;inset:0;z-index:1000;background:radial-gradient(circle at 18% 8%,rgba(23,83,175,.5),transparent 34%),radial-gradient(circle at 88% 14%,rgba(255,189,23,.16),transparent 35%),linear-gradient(135deg,#020711,#07152a 55%,#020711);display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;transition:opacity .5s ease}
+#splash.hide{opacity:0;pointer-events:none}
+#splash::before{content:'';position:absolute;width:420px;height:420px;border-radius:50%;border:1px solid rgba(255,189,23,.1);top:50%;left:50%;transform:translate(-50%,-50%);animation:spPulse 3s ease-in-out infinite}
+#splash::after{content:'';position:absolute;width:290px;height:290px;border-radius:50%;border:1px solid rgba(255,189,23,.16);top:50%;left:50%;transform:translate(-50%,-50%);animation:spPulse 3s .5s ease-in-out infinite}
+@keyframes spPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.5}50%{transform:translate(-50%,-50%) scale(1.06);opacity:1}}
+.splash-mark{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;animation:spIn .8s cubic-bezier(.22,1,.36,1) both}
+.splash-mark img{width:min(148px,40vw);height:min(148px,40vw);border-radius:28px;box-shadow:0 16px 60px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.06);display:block}
+.splash-mark h1{margin-top:24px;color:#f7fbff;font:900 1.5rem Inter,sans-serif;letter-spacing:-.5px}
+.splash-mark h1 b{color:var(--gold)}
+.splash-mark p{color:var(--muted);font-size:.7rem;letter-spacing:.22em;text-transform:uppercase;margin-top:8px}
+.splash-dots{display:flex;gap:8px;margin-top:36px}
+.splash-dots span{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.2);animation:spDot 1.4s ease-in-out infinite}
+.splash-dots span:nth-child(2){animation-delay:.2s}.splash-dots span:nth-child(3){animation-delay:.4s}
+@keyframes spDot{0%,100%{background:rgba(255,255,255,.18);transform:scale(1)}50%{background:var(--gold);transform:scale(1.35)}}
+@keyframes spIn{from{transform:translateY(26px);opacity:0}to{transform:translateY(0);opacity:1}}
 </style>
 </head>
 <body>
+<div id="splash">
+  <div class="splash-mark">
+    <img src="/icons/icon-192.png" alt="Casa RP Thermo" />
+    <h1>CASA RP <b>THERMO</b></h1>
+    <p>controle térmico inteligente</p>
+  </div>
+  <div class="splash-dots"><span></span><span></span><span></span></div>
+</div>
 <div class="app">
   <header class="topbar">
     <div class="brand">
@@ -388,6 +419,13 @@ setInterval(pollHistory, 60000);
 setInterval(pollOverview, 30000);
 renderCards(); updateDash(); clock();
 pollRealData(); pollHistory(); pollOverview();
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    document.getElementById('splash').classList.add('hide');
+    setTimeout(() => { document.getElementById('splash').style.display = 'none'; }, 500);
+  }, 1800);
+});
 </script>
 </body>
 </html>
